@@ -85,6 +85,13 @@ int main(int argc, char* argv[])
 
     size_t bytesRead = fread(buffer, 1, 8, file);
 
+    printf("File first 8 bytes: ");
+    for (int i = 0; i < bytesRead && i < 8; i++)
+    {
+        printf("%02x ", buffer[i]);
+    }
+    printf("\n");
+
     if (bytesRead != 8) {
         printf("File too small to be a PNG.\n");
         return 1;
