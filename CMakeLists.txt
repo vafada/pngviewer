@@ -9,3 +9,5 @@ include_directories(${SDL2_INCLUDE_DIR})
 add_executable(pngviewer main.c)
 
 target_link_libraries(pngviewer SDL2)
+
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/basn6a08.png DESTINATION ${CMAKE_BINARY_DIR})
