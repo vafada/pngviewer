@@ -103,6 +103,19 @@ Chunk *add_chunk(Chunk *head, unsigned int length, unsigned char *type, unsigned
     return head;
 }
 
+void free_chunks(Chunk *head) {
+    Chunk *current = head;
+    while (current != NULL) {
+        Chunk *next = current->next;
+        free(current->type);
+        free(current->data);
+        free(current->crc);
+        free(current);
+        current = next;
+    }
+}
+
+
 int main(int argc, char *argv[]) {
     FILE *file = fopen("basn6a08.png", "rb"); // Open file in binary read mode
     if (!file) {
@@ -144,9 +157,6 @@ int main(int argc, char *argv[]) {
     }
     */
 
-    size_t bytes_read;
-
-
     Chunk *head = NULL;
 
     while ((fread(buffer, 1, 8, file)) > 0) {
@@ -167,7 +177,7 @@ int main(int argc, char *argv[]) {
         //printf("type %s \n", type);
 
         unsigned char *chunkData = malloc(length);
-        bytes_read = fread(chunkData, 1, length, file);
+        size_t bytes_read = fread(chunkData, 1, length, file);
         if (bytes_read != length) {
             printf("Incorrect chunk data length.\n");
             return 1;
@@ -180,54 +190,29 @@ int main(int argc, char *argv[]) {
         }
 
         head = add_chunk(head, length, type, chunkData, crc);
+
+        free(chunkData);
     }
 
-    /*Chunk *cur = head;
+    Chunk *cur = head;
     while (cur) {
+        printf("----------------\n");
         printf("Chunk type: %s\n", cur->type);
+        printf("Chunk length: %d\n", cur->length);
+        printf("Chunk data: \n");
+        for (int i = 0; i < cur->length; i++) {
+            printf("%02x ", cur->data[i]);
+        }
+        printf("\nChunk crc: \n");
+        for (int i = 0; i < 4; i++) {
+            printf("%02x ", cur->crc[i]);
+        }
+        printf("\n----------------\n");
         cur = cur->next;
-    }*/
-
-    return 0;
-
-    /*
-    // Find file size
-    fseek(file, 0, SEEK_END);
-    long size = ftell(file);
-    rewind(file);
-
-    // Allocate buffer for file contents
-    unsigned char* buffer = malloc(size);
-    if (!buffer)
-    {
-        perror("Memory allocation failed");
-        fclose(file);
-        return 1;
     }
-
-    // Read file into buffer
-    size_t read = fread(buffer, 1, size, file);
-    if (read != size)
-    {
-        perror("Failed to read file");
-        free(buffer);
-        fclose(file);
-        return 1;
-    }
-
-    // check for .PNG header
-
-
-    // Use the buffer (example: print first 8 bytes as hex)
-    for (int i = 0; i < size && i < 8; i++)
-    {
-        printf("%02x ", buffer[i]);
-    }
-    printf("\n");
-    */
 
     // Clean up
-    free(buffer);
+    free_chunks(head);
     fclose(file);
 
     return 0;
