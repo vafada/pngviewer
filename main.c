@@ -71,11 +71,41 @@ int main(int argc, char* argv[])
 #include <stdlib.h>
 #include <string.h>
 
-int main(int argc, char* argv[])
-{
-    FILE* file = fopen("basn6a08.png", "rb"); // Open file in binary read mode
-    if (!file)
-    {
+typedef struct Chunk {
+    unsigned int length;
+    unsigned char *type;
+    unsigned char *data;
+    unsigned char *crc;
+    struct Chunk *next;
+} Chunk;
+
+Chunk *add_chunk(Chunk *head, unsigned int length, unsigned char *type, unsigned char *data, unsigned char *crc) {
+    Chunk *node = malloc(sizeof(Chunk));
+    node->length = length;
+    node->type = malloc(5);
+    memcpy(node->type, type, 5);
+    node->data = malloc(length);
+    memcpy(node->data, data, length);
+    node->crc = malloc(4);
+    memcpy(node->crc, crc, 4);
+    node->next = NULL;
+
+    if (!head) {
+        return node;
+    }
+
+    Chunk *cur = head;
+    while (cur->next) {
+        cur = cur->next;
+    }
+    cur->next = node;
+
+    return head;
+}
+
+int main(int argc, char *argv[]) {
+    FILE *file = fopen("basn6a08.png", "rb"); // Open file in binary read mode
+    if (!file) {
         perror("Unable to open file");
         return 1;
     }
@@ -86,8 +116,7 @@ int main(int argc, char* argv[])
     size_t bytesRead = fread(buffer, 1, 8, file);
 
     printf("File first 8 bytes: ");
-    for (int i = 0; i < bytesRead && i < 8; i++)
-    {
+    for (int i = 0; i < bytesRead && i < 8; i++) {
         printf("%02x ", buffer[i]);
     }
     printf("\n");
@@ -97,11 +126,67 @@ int main(int argc, char* argv[])
         return 1;
     }
 
+    // no memcmp
+    for (int i = 0; i < bytesRead && i < 8; i++) {
+        if (buffer[i] != png_signature[i]) {
+            printf("File is NOT a PNG file.\n");
+            return 1;
+        }
+    }
+
+    printf("File is a PNG file.\n");
+
+    /*
     if (memcmp(buffer, png_signature, 8) == 0) {
         printf("File is a PNG file.\n");
     } else {
         printf("File is NOT a PNG file.\n");
     }
+    */
+
+    size_t bytes_read;
+
+
+    Chunk *head = NULL;
+
+    while ((fread(buffer, 1, 8, file)) > 0) {
+        unsigned int length = (buffer[0] << 24) |
+                              (buffer[1] << 16) |
+                              (buffer[2] << 8) |
+                              (buffer[3]);
+
+        unsigned char type[5] = {
+            buffer[4],
+            buffer[5],
+            buffer[6],
+            buffer[7],
+            '\0',
+        };
+
+        //printf("length = %d \n", length);
+        //printf("type %s \n", type);
+
+        unsigned char *chunkData = malloc(length);
+        bytes_read = fread(chunkData, 1, length, file);
+        if (bytes_read != length) {
+            printf("Incorrect chunk data length.\n");
+            return 1;
+        }
+        unsigned char crc[4];
+        bytes_read = fread(crc, 1, 4, file);
+        if (bytes_read != 4) {
+            printf("Incorrect crc data length.\n");
+            return 1;
+        }
+
+        head = add_chunk(head, length, type, chunkData, crc);
+    }
+
+    /*Chunk *cur = head;
+    while (cur) {
+        printf("Chunk type: %s\n", cur->type);
+        cur = cur->next;
+    }*/
 
     return 0;
 
