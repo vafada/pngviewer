@@ -190,6 +190,57 @@ int main(int argc, char *argv[]) {
         cur = cur->next;
     }
 
+    unsigned char *headerData = head->data;
+    unsigned int width = (headerData[0] << 24) |
+                         (headerData[1] << 16) |
+                         (headerData[2] << 8) |
+                         (headerData[3]);
+
+    unsigned int height = (headerData[4] << 24) |
+                         (headerData[5] << 16) |
+                         (headerData[6] << 8) |
+                         (headerData[7]);
+
+    unsigned char bitDepth = headerData[8];
+    unsigned char colorType = headerData[9];
+    unsigned char compressionMethod = headerData[10];
+    unsigned char filterMethod = headerData[11];
+    unsigned char interlaceMethod = headerData[12];
+
+    if (compressionMethod != 0) {
+        printf("Compression method not supported.\n");
+        return 1;
+    }
+
+    if (filterMethod != 0) {
+        printf("Filter method not supported.\n");
+        return 1;
+    }
+
+    if (colorType != 6) {
+        printf("Color type not supported.\n");
+        return 1;
+    }
+
+    if (bitDepth != 8) {
+        printf("Bit depth not supported.\n");
+        return 1;
+    }
+
+    if (interlaceMethod != 0) {
+        printf("Interlace method not supported.\n");
+        return 1;
+    }
+
+    printf("Image width %d \n", width);
+    printf("Image height %d \n", height);
+    printf("Bit depth %d \n", bitDepth);
+    printf("Color Type %d \n", colorType);
+    printf("Compression Method %d \n", compressionMethod);
+    printf("Filter Method %d \n", filterMethod);
+    printf("Interlace Method %d \n", interlaceMethod);
+
+
     // Clean up
     free_chunks(head);
     fclose(file);
