@@ -1,67 +1,46 @@
 /*
-#include <SDL.h>
+#include "raylib.h"
 
-int main(int argc, char* argv[])
+int main(void)
 {
-    if (SDL_Init(SDL_INIT_VIDEO) != 0)
+    const int screenWidth = 800;
+    const int screenHeight = 450;
+
+    InitWindow(screenWidth, screenHeight, "raylib [core] example - basic window");
+
+    SetTargetFPS(60);               // Set our game to run at 60 frames-per-second
+
+    // Main game loop
+    while (!WindowShouldClose())    // Detect window close button or ESC key
     {
-        SDL_Log("Unable to initialize SDL: %s", SDL_GetError());
-        return 1;
-    }
+        // Update
+        //----------------------------------------------------------------------------------
+        // TODO: Update your variables here
+        //----------------------------------------------------------------------------------
 
-    SDL_Window* window = SDL_CreateWindow("Red Pixel",
-                                          SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-                                          500, 500, SDL_WINDOW_SHOWN);
+        // Draw
+        //----------------------------------------------------------------------------------
+        BeginDrawing();
 
-    if (!window)
-    {
-        SDL_Log("Could not create window: %s", SDL_GetError());
-        SDL_Quit();
-        return 1;
-    }
+        ClearBackground(RAYWHITE);
 
-    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
-    if (!renderer)
-    {
-        SDL_Log("Could not create renderer: %s", SDL_GetError());
-        SDL_DestroyWindow(window);
-        SDL_Quit();
-        return 1;
-    }
+        //DrawText("Congrats! You created your first window!", 190, 200, 20, LIGHTGRAY);
 
-    SDL_bool done = SDL_FALSE;
-
-    while (!done)
-    {
-        SDL_Event event;
-
-        while (SDL_PollEvent(&event))
-        {
-            switch (event.type)
-            {
-            case SDL_QUIT:
-                done = SDL_TRUE;
-                break;
+        for (int x = 10; x < 100; x++) {
+            for (int y = 10; y < 100; y++) {
+                DrawPixel(x, y, MAROON);
             }
         }
 
-        // Set render draw color to white and clear the screen.
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-        SDL_RenderClear(renderer);
 
-        // Set draw color to red.
-        SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
-
-        // Draw a 50x50 red pixel (rectangle) at (25, 25).
-        SDL_Rect rect = {25, 25, 50, 50};
-        SDL_RenderFillRect(renderer, &rect);
-
-        SDL_RenderPresent(renderer);
+        EndDrawing();
+        //----------------------------------------------------------------------------------
     }
 
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
-    SDL_Quit();
+    // De-Initialization
+    //--------------------------------------------------------------------------------------
+    CloseWindow();        // Close window and OpenGL context
+    //--------------------------------------------------------------------------------------
 
     return 0;
 }
@@ -149,13 +128,13 @@ int main(int argc, char *argv[]) {
 
     printf("File is a PNG file.\n");
 
-    /*
-    if (memcmp(buffer, png_signature, 8) == 0) {
-        printf("File is a PNG file.\n");
-    } else {
-        printf("File is NOT a PNG file.\n");
-    }
-    */
+
+    //if (memcmp(buffer, png_signature, 8) == 0) {
+    //   printf("File is a PNG file.\n");
+    //} else {
+    //    printf("File is NOT a PNG file.\n");
+    //}
+
 
     Chunk *head = NULL;
 
