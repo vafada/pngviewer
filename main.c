@@ -263,10 +263,13 @@ int main(int argc, char *argv[]) {
         printf("%02x ", idatData[i]);
     }
 
+    unsigned int bytesPerPixel = colorType == 6 ? 4 : 1;
+
     // Calculate the size needed for the decompressed data
     // For RGBA (color type 6) with 8-bit depth, each pixel needs 4 bytes
     // Plus 1 byte per scanline for the filter type
-    uLongf decompressedLength = height * (width * 4 + 1);
+    // For color type 3, each byte is an index to the palette
+    uLongf decompressedLength = height * (width * bytesPerPixel + 1);
     unsigned char *decompressedData = malloc(decompressedLength);
 
     // Decompress the data
