@@ -291,7 +291,6 @@ int main(int argc, char *argv[]) {
     }
     printf("\n");
 
-    unsigned int bytesPerPixel = 4;
     unsigned int stride = width * bytesPerPixel;
     int reconIndex = 0;
     unsigned char recon[height * stride];
@@ -345,6 +344,8 @@ int main(int argc, char *argv[]) {
 
     const int screenWidth = 800;
     const int screenHeight = 450;
+
+    printf("Initializing raylib\n");
 
     SetTraceLogLevel(LOG_NONE); // Disable all logs
     InitWindow(screenWidth, screenHeight, "raylib [core] example - basic window");
