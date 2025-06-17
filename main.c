@@ -204,7 +204,7 @@ int main(int argc, char *argv[]) {
     unsigned char compressionMethod = headerData[10];
     unsigned char filterMethod = headerData[11];
     unsigned char interlaceMethod = headerData[12];
-`
+
     printf("Image width %d \n", width);
     printf("Image height %d \n", height);
     printf("Bit depth %d \n", bitDepth);
