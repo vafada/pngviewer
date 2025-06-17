@@ -5,6 +5,7 @@
 #include <string.h>
 #include <zlib.h>
 #include <math.h>
+#include <stdint.h>
 
 typedef struct Chunk {
     unsigned int length;
@@ -91,7 +92,7 @@ int main(int argc, char *argv[]) {
     if (argc > 1) {
         input = argv[1]; // Use the first argument
     } else {
-        input = "fish.png"; // Use the default value
+        input = "bee.png"; // Use the default value
     }
 
     FILE *file = fopen(input, "rb"); // Open file in binary read mode
@@ -223,12 +224,12 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    if (colorType != 6 && colorType != 3) {
+    if (colorType != 6 && colorType != 3 && colorType != 2) {
         printf("Color type not supported %d.\n", colorType);
         return 1;
     }
 
-    if (bitDepth != 8) {
+    if (bitDepth != 8 && bitDepth != 16) {
         printf("Bit depth not supported.\n");
         return 1;
     }
@@ -239,9 +240,9 @@ int main(int argc, char *argv[]) {
     }
 
     // color type 3 must have PLTE chunk
-    int numPalettes = 0;
     Color *colorPalette;
     if (colorType == 3) {
+        int numPalettes = 0;
         bool foundPLTE = false;
         Chunk *cur = head;
         while (cur) {
@@ -293,12 +294,32 @@ int main(int argc, char *argv[]) {
         current = current->next; // Move to the next node
     }
 
-    printf("IDAT data: ");
+    /*printf("IDAT data: ");
     for (int i = 0; i < totalIdatLength; i++) {
         printf("%02x ", idatData[i]);
-    }
+    }*/
 
     unsigned int bytesPerPixel = colorType == 6 ? 4 : 1;
+    if (colorType == 3) {
+        bytesPerPixel = 1;
+    } else if (colorType == 6) {
+        if (bitDepth == 8) {
+            bytesPerPixel = 4;
+        } else if (bitDepth == 16) {
+            bytesPerPixel = 8;
+        }
+    } else if (colorType == 2) {
+        if (bitDepth == 8) {
+            bytesPerPixel = 3;
+        } else if (bitDepth == 16) {
+            bytesPerPixel = 6;
+        }
+    }
+
+    else {
+        printf("Color type not supported %d.\n", colorType);
+        return 1;
+    }
 
     // Calculate the size needed for the decompressed data
     // For RGBA (color type 6) with 8-bit depth, each pixel needs 4 bytes
@@ -415,6 +436,34 @@ int main(int argc, char *argv[]) {
                 for (int x = 0; x < width; x++) {
                     int pixelIndex = x + y * width;
                     DrawPixel(x, y, colorPalette[recon[pixelIndex]]);
+                }
+            }
+        } else if (colorType == 2) {
+
+            if (bitDepth == 8) {
+                int index = 0;
+                for (int y = 0; y < height; y++) {
+                    for (int x = 0; x < width; x++) {
+                        unsigned char r = recon[index++];
+                        unsigned char g = recon[index++];
+                        unsigned char b = recon[index++];
+
+                        Color pixelColor = (Color){r, g, b, 255};
+                        DrawPixel(x, y, pixelColor);
+                    }
+                }
+            } else {
+                int index = 0;
+                for (int y = 0; y < height; y++) {
+                    for (int x = 0; x < width; x++) {
+                        uint8_t r = (recon[index++] << 8 | recon[index++]) >> 8;
+                        uint8_t g = (recon[index++] << 8 | recon[index++]) >> 8;
+                        uint8_t b = (recon[index++] << 8 | recon[index++]) >> 8;
+
+
+                        Color pixelColor = (Color){r, g, b, 255};
+                        DrawPixel(x, y, pixelColor);
+                    }
                 }
             }
         }
