@@ -223,7 +223,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    if (colorType != 6) {
+    if (colorType != 6 && colorType != 3) {
         printf("Color type not supported %d.\n", colorType);
         return 1;
     }
@@ -322,7 +322,7 @@ int main(int argc, char *argv[]) {
                 unsigned char recC = recon_c(recon, y, x, bytesPerPixel, stride);
                 recon_x = filter_x + paethPredictor(recA, recB, recC);
             } else {
-                printf("Invalid filter type: %d\n", filterType);
+                printf("Invalid filter type: %d. y = %d x = %d\n", filterType, y, x);
                 return 1;
             }
 
