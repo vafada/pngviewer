@@ -86,7 +86,15 @@ unsigned char paethPredictor(unsigned char a, unsigned char b, unsigned char c) 
 }
 
 int main(int argc, char *argv[]) {
-    FILE *file = fopen("basn6a08.png", "rb"); // Open file in binary read mode
+    const char *input;
+
+    if (argc > 1) {
+        input = argv[1]; // Use the first argument
+    } else {
+        input = "basn6a08.png"; // Use the default value
+    }
+
+    FILE *file = fopen(input, "rb"); // Open file in binary read mode
     if (!file) {
         perror("Unable to open file");
         return 1;
@@ -208,7 +216,7 @@ int main(int argc, char *argv[]) {
     }
 
     if (colorType != 6) {
-        printf("Color type not supported.\n");
+        printf("Color type not supported %d.\n", colorType);
         return 1;
     }
 
@@ -292,7 +300,7 @@ int main(int argc, char *argv[]) {
     for (int y = 0; y < height; y++) {
         // for each scanline
         unsigned char filterType = decompressedData[i];
-        printf("height: %d has filterType: %d : i = %d \n", y, filterType, i);
+        //printf("height: %d has filterType: %d : i = %d \n", y, filterType, i);
         i += 1;
         for (int x = 0; x < stride; x++) {
             // for each byte in the scanline
@@ -319,7 +327,7 @@ int main(int argc, char *argv[]) {
             }
 
 
-             printf("x %d = filter_x: %d : recon_x: %d \n", x, filter_x, recon_x);
+             // printf("x %d = filter_x: %d : recon_x: %d \n", x, filter_x, recon_x);
 
             recon[reconIndex] = recon_x & 0xFF;
             reconIndex += 1;

@@ -3,6 +3,11 @@ project(pngviewer C)
 
 set(CMAKE_C_STANDARD 17)
 
+if (${APPLE})
+    message ("MAC OS X")
+    include_directories(/opt/homebrew/Cellar/raylib/5.5/include/)
+endif ()
+
 add_executable(pngviewer main.c)
 
 target_link_libraries(pngviewer raylib)
