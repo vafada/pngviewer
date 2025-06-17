@@ -1,51 +1,5 @@
-/*
+// https://pyokagan.name/blog/2019-10-14-png/
 #include "raylib.h"
-
-int main(void)
-{
-    const int screenWidth = 800;
-    const int screenHeight = 450;
-
-    InitWindow(screenWidth, screenHeight, "raylib [core] example - basic window");
-
-    SetTargetFPS(60);               // Set our game to run at 60 frames-per-second
-
-    // Main game loop
-    while (!WindowShouldClose())    // Detect window close button or ESC key
-    {
-        // Update
-        //----------------------------------------------------------------------------------
-        // TODO: Update your variables here
-        //----------------------------------------------------------------------------------
-
-        // Draw
-        //----------------------------------------------------------------------------------
-        BeginDrawing();
-
-        ClearBackground(RAYWHITE);
-
-        //DrawText("Congrats! You created your first window!", 190, 200, 20, LIGHTGRAY);
-
-        for (int x = 10; x < 100; x++) {
-            for (int y = 10; y < 100; y++) {
-                DrawPixel(x, y, MAROON);
-            }
-        }
-
-
-        EndDrawing();
-        //----------------------------------------------------------------------------------
-    }
-
-    // De-Initialization
-    //--------------------------------------------------------------------------------------
-    CloseWindow();        // Close window and OpenGL context
-    //--------------------------------------------------------------------------------------
-
-    return 0;
-}
-*/
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -96,23 +50,23 @@ void free_chunks(Chunk *head) {
     }
 }
 
-unsigned char recon_a(unsigned char *recon[], int r, int c, unsigned int bytesPerPixel, unsigned int stride) {
+unsigned char recon_a(unsigned char *recon, int r, int c, unsigned int bytesPerPixel, unsigned int stride) {
     if (c >= bytesPerPixel) {
         return recon[r * stride + c - bytesPerPixel];
     }
     return 0;
 }
 
-unsigned char recon_b(unsigned char *recon[], int r, int c, unsigned int stride) {
+unsigned char recon_b(unsigned char *recon, int r, int c, unsigned int stride) {
     if (r > 0) {
-        return recon[(r-1) * stride + c];
+        return recon[(r - 1) * stride + c];
     }
     return 0;
 }
 
-unsigned char recon_c(unsigned char *recon[], int r, int c, unsigned int bytesPerPixel, unsigned int stride) {
+unsigned char recon_c(unsigned char *recon, int r, int c, unsigned int bytesPerPixel, unsigned int stride) {
     if (r > 0 && c >= bytesPerPixel) {
-        return recon[(r-1) * stride + c - bytesPerPixel];
+        return recon[(r - 1) * stride + c - bytesPerPixel];
     }
     return 0;
 }
@@ -233,9 +187,9 @@ int main(int argc, char *argv[]) {
                          (headerData[3]);
 
     unsigned int height = (headerData[4] << 24) |
-                         (headerData[5] << 16) |
-                         (headerData[6] << 8) |
-                         (headerData[7]);
+                          (headerData[5] << 16) |
+                          (headerData[6] << 8) |
+                          (headerData[7]);
 
     unsigned char bitDepth = headerData[8];
     unsigned char colorType = headerData[9];
@@ -277,12 +231,12 @@ int main(int argc, char *argv[]) {
     printf("Interlace Method %d \n", interlaceMethod);
 
     int totalIdatLength = 0;
-    Chunk* current = head;
+    Chunk *current = head;
     while (current != NULL) {
         if (current->type[0] == 'I' && current->type[1] == 'D' && current->type[2] == 'A' && current->type[3] == 'T') {
             totalIdatLength += current->length;
         }
-        current = current->next;       // Move to the next node
+        current = current->next; // Move to the next node
     }
 
     size_t offset = 0;
@@ -293,7 +247,7 @@ int main(int argc, char *argv[]) {
             memcpy(idatData + offset, current->data, current->length);
             offset += current->length;
         }
-        current = current->next;       // Move to the next node
+        current = current->next; // Move to the next node
     }
 
     printf("IDAT data: ");
@@ -309,7 +263,7 @@ int main(int argc, char *argv[]) {
 
     // Decompress the data
     int result = uncompress(decompressedData, &decompressedLength,
-                           idatData, totalIdatLength);
+                            idatData, totalIdatLength);
 
     if (result != Z_OK) {
         printf("Decompression failed with error code: %d\n", result);
@@ -330,14 +284,20 @@ int main(int argc, char *argv[]) {
     unsigned int stride = width * bytesPerPixel;
     int reconIndex = 0;
     unsigned char recon[height * stride];
+    for (int i = 0; i < height * stride; i++) {
+        recon[i] = 0;
+    }
 
     int i = 0;
-    for (int y = 0; y < height; y++) { // for each scanline
-        int filterType = decompressedData[i];
-        // printf("height %d = filterType: %d \n", y, filterType);
+    for (int y = 0; y < height; y++) {
+        // for each scanline
+        unsigned char filterType = decompressedData[i];
+        printf("height: %d has filterType: %d : i = %d \n", y, filterType, i);
         i += 1;
-        for (int x = 0; x < stride; x++) { // for each byte in the scanline
+        for (int x = 0; x < stride; x++) {
+            // for each byte in the scanline
             unsigned char filter_x = decompressedData[i];
+            i += 1;
             unsigned char recon_x;
             if (filterType == 0) {
                 recon_x = filter_x;
@@ -346,13 +306,20 @@ int main(int argc, char *argv[]) {
             } else if (filterType == 2) {
                 recon_x = filter_x + recon_b(recon, y, x, stride);
             } else if (filterType == 3) {
-                recon_x = filter_x +  floor((recon_a(recon, y, x, bytesPerPixel, stride) + recon_b(recon, y, x, stride)) / 2);
+                recon_x = filter_x + floor(
+                              (recon_a(recon, y, x, bytesPerPixel, stride) + recon_b(recon, y, x, stride)) / 2);
             } else if (filterType == 4) {
                 unsigned char recA = recon_a(recon, y, x, bytesPerPixel, stride);
                 unsigned char recB = recon_b(recon, y, x, stride);
                 unsigned char recC = recon_c(recon, y, x, bytesPerPixel, stride);
                 recon_x = filter_x + paethPredictor(recA, recB, recC);
+            } else {
+                printf("Invalid filter type: %d\n", filterType);
+                return 1;
             }
+
+
+             printf("x %d = filter_x: %d : recon_x: %d \n", x, filter_x, recon_x);
 
             recon[reconIndex] = recon_x & 0xFF;
             reconIndex += 1;
@@ -365,8 +332,39 @@ int main(int argc, char *argv[]) {
     }
     printf("\n");
 
+    const int screenWidth = 800;
+    const int screenHeight = 450;
 
-    // Don't forget to free the memory when you're done
+    SetTraceLogLevel(LOG_NONE); // Disable all logs
+    InitWindow(screenWidth, screenHeight, "raylib [core] example - basic window");
+    SetTargetFPS(60); // Set our game to run at 60 frames-per-second
+
+    // Main game loop
+    while (!WindowShouldClose()) // Detect window close button or ESC key
+    {
+        BeginDrawing();
+
+        ClearBackground(RAYWHITE);
+
+        int index = 0;
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                unsigned char r = recon[index++];
+                unsigned char g = recon[index++];
+                unsigned char b = recon[index++];
+                unsigned char a = recon[index++];
+
+
+                Color pixelColor = (Color){r, g, b, a};
+                DrawPixel(x, y, pixelColor);
+            }
+        }
+
+        EndDrawing();
+    }
+
+    CloseWindow(); // Close window and OpenGL context
+
     free(decompressedData);
     free(idatData);
     // Clean up
