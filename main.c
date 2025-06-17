@@ -91,7 +91,7 @@ int main(int argc, char *argv[]) {
     if (argc > 1) {
         input = argv[1]; // Use the first argument
     } else {
-        input = "basn6a08.png"; // Use the default value
+        input = "fish.png"; // Use the default value
     }
 
     FILE *file = fopen(input, "rb"); // Open file in binary read mode

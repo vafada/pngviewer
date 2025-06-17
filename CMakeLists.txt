@@ -14,3 +14,4 @@ target_link_libraries(pngviewer raylib)
 target_link_libraries(pngviewer z)
 
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/basn6a08.png DESTINATION ${CMAKE_BINARY_DIR})
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/fish.png DESTINATION ${CMAKE_BINARY_DIR})
