@@ -6,5 +6,6 @@ set(CMAKE_C_STANDARD 17)
 add_executable(pngviewer main.c)
 
 target_link_libraries(pngviewer raylib)
+target_link_libraries(pngviewer z)
 
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/basn6a08.png DESTINATION ${CMAKE_BINARY_DIR})

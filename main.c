@@ -49,6 +49,8 @@ int main(void)
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <zlib.h>
+#include <math.h>
 
 typedef struct Chunk {
     unsigned int length;
@@ -94,6 +96,40 @@ void free_chunks(Chunk *head) {
     }
 }
 
+unsigned char recon_a(unsigned char *recon[], int r, int c, unsigned int bytesPerPixel, unsigned int stride) {
+    if (c >= bytesPerPixel) {
+        return recon[r * stride + c - bytesPerPixel];
+    }
+    return 0;
+}
+
+unsigned char recon_b(unsigned char *recon[], int r, int c, unsigned int stride) {
+    if (r > 0) {
+        return recon[(r-1) * stride + c];
+    }
+    return 0;
+}
+
+unsigned char recon_c(unsigned char *recon[], int r, int c, unsigned int bytesPerPixel, unsigned int stride) {
+    if (r > 0 && c >= bytesPerPixel) {
+        return recon[(r-1) * stride + c - bytesPerPixel];
+    }
+    return 0;
+}
+
+unsigned char paethPredictor(unsigned char a, unsigned char b, unsigned char c) {
+    int p = a + b - c;
+    int pa = abs(p - a);
+    int pb = abs(p - b);
+    int pc = abs(p - c);
+    if (pa <= pb && pa <= pc) {
+        return a;
+    }
+    if (pb <= pc) {
+        return b;
+    }
+    return c;
+}
 
 int main(int argc, char *argv[]) {
     FILE *file = fopen("basn6a08.png", "rb"); // Open file in binary read mode
@@ -240,7 +276,99 @@ int main(int argc, char *argv[]) {
     printf("Filter Method %d \n", filterMethod);
     printf("Interlace Method %d \n", interlaceMethod);
 
+    int totalIdatLength = 0;
+    Chunk* current = head;
+    while (current != NULL) {
+        if (current->type[0] == 'I' && current->type[1] == 'D' && current->type[2] == 'A' && current->type[3] == 'T') {
+            totalIdatLength += current->length;
+        }
+        current = current->next;       // Move to the next node
+    }
 
+    size_t offset = 0;
+    unsigned char *idatData = malloc(totalIdatLength);
+    current = head;
+    while (current != NULL) {
+        if (current->type[0] == 'I' && current->type[1] == 'D' && current->type[2] == 'A' && current->type[3] == 'T') {
+            memcpy(idatData + offset, current->data, current->length);
+            offset += current->length;
+        }
+        current = current->next;       // Move to the next node
+    }
+
+    printf("IDAT data: ");
+    for (int i = 0; i < totalIdatLength; i++) {
+        printf("%02x ", idatData[i]);
+    }
+
+    // Calculate the size needed for the decompressed data
+    // For RGBA (color type 6) with 8-bit depth, each pixel needs 4 bytes
+    // Plus 1 byte per scanline for the filter type
+    uLongf decompressedLength = height * (width * 4 + 1);
+    unsigned char *decompressedData = malloc(decompressedLength);
+
+    // Decompress the data
+    int result = uncompress(decompressedData, &decompressedLength,
+                           idatData, totalIdatLength);
+
+    if (result != Z_OK) {
+        printf("Decompression failed with error code: %d\n", result);
+        free(decompressedData);
+        free(idatData);
+        return 1;
+    }
+
+    printf("\nDecompressed data length: %lu\n", decompressedLength);
+
+    printf("Decompressed data: ");
+    for (int i = 0; i < decompressedLength; i++) {
+        printf("%02x ", decompressedData[i]);
+    }
+    printf("\n");
+
+    unsigned int bytesPerPixel = 4;
+    unsigned int stride = width * bytesPerPixel;
+    int reconIndex = 0;
+    unsigned char recon[height * stride];
+
+    int i = 0;
+    for (int y = 0; y < height; y++) { // for each scanline
+        int filterType = decompressedData[i];
+        // printf("height %d = filterType: %d \n", y, filterType);
+        i += 1;
+        for (int x = 0; x < stride; x++) { // for each byte in the scanline
+            unsigned char filter_x = decompressedData[i];
+            unsigned char recon_x;
+            if (filterType == 0) {
+                recon_x = filter_x;
+            } else if (filterType == 1) {
+                recon_x = filter_x + recon_a(recon, y, x, bytesPerPixel, stride);
+            } else if (filterType == 2) {
+                recon_x = filter_x + recon_b(recon, y, x, stride);
+            } else if (filterType == 3) {
+                recon_x = filter_x +  floor((recon_a(recon, y, x, bytesPerPixel, stride) + recon_b(recon, y, x, stride)) / 2);
+            } else if (filterType == 4) {
+                unsigned char recA = recon_a(recon, y, x, bytesPerPixel, stride);
+                unsigned char recB = recon_b(recon, y, x, stride);
+                unsigned char recC = recon_c(recon, y, x, bytesPerPixel, stride);
+                recon_x = filter_x + paethPredictor(recA, recB, recC);
+            }
+
+            recon[reconIndex] = recon_x & 0xFF;
+            reconIndex += 1;
+        }
+    }
+
+    printf("pixel data: ");
+    for (int i = 0; i < (height * stride); i++) {
+        printf("%02x ", recon[i]);
+    }
+    printf("\n");
+
+
+    // Don't forget to free the memory when you're done
+    free(decompressedData);
+    free(idatData);
     // Clean up
     free_chunks(head);
     fclose(file);
