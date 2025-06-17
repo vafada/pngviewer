@@ -91,7 +91,7 @@ int main(int argc, char *argv[]) {
     if (argc > 1) {
         input = argv[1]; // Use the first argument
     } else {
-        input = "basn6a08.png"; // Use the default value
+        input = "fish.png"; // Use the default value
     }
 
     FILE *file = fopen(input, "rb"); // Open file in binary read mode
@@ -223,7 +223,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    if (colorType != 6) {
+    if (colorType != 6 && colorType != 3) {
         printf("Color type not supported %d.\n", colorType);
         return 1;
     }
@@ -237,6 +237,41 @@ int main(int argc, char *argv[]) {
         printf("Interlace method not supported.\n");
         return 1;
     }
+
+    // color type 3 must have PLTE chunk
+    int numPalettes = 0;
+    Color *colorPalette;
+    if (colorType == 3) {
+        bool foundPLTE = false;
+        Chunk *cur = head;
+        while (cur) {
+            if (cur->type[0] == 'P' && cur->type[1] == 'L' && cur->type[2] == 'T' && cur->type[3] == 'E') {
+                foundPLTE = true;
+                break;
+            }
+            cur = cur->next;
+        }
+        if (!foundPLTE) {
+            printf("PLTE chunk not found.\n");
+            return 1;
+        }
+        if (cur->length % 3 != 0) {
+            printf("PLTE chunk length is not a multiple of 3.\n");
+            return 1;
+        }
+
+        numPalettes = cur->length / 3;
+        colorPalette = malloc(numPalettes * sizeof(Color));
+        int index = 0;
+        for (int i = 0; i < cur->length; i += 3) {
+            colorPalette[index].r = cur->data[i];
+            colorPalette[index].g = cur->data[i + 1];
+            colorPalette[index].b = cur->data[i + 2];
+            colorPalette[index].a = 255;
+            index++;
+        }
+    }
+
 
     int totalIdatLength = 0;
     Chunk *current = head;
@@ -263,10 +298,13 @@ int main(int argc, char *argv[]) {
         printf("%02x ", idatData[i]);
     }
 
+    unsigned int bytesPerPixel = colorType == 6 ? 4 : 1;
+
     // Calculate the size needed for the decompressed data
     // For RGBA (color type 6) with 8-bit depth, each pixel needs 4 bytes
     // Plus 1 byte per scanline for the filter type
-    uLongf decompressedLength = height * (width * 4 + 1);
+    // For color type 3, each byte is an index to the palette
+    uLongf decompressedLength = height * (width * bytesPerPixel + 1);
     unsigned char *decompressedData = malloc(decompressedLength);
 
     // Decompress the data
@@ -282,13 +320,14 @@ int main(int argc, char *argv[]) {
 
     printf("\nDecompressed data length: %lu\n", decompressedLength);
 
+    /*
     printf("Decompressed data: ");
     for (int i = 0; i < decompressedLength; i++) {
         printf("%02x ", decompressedData[i]);
     }
     printf("\n");
+    */
 
-    unsigned int bytesPerPixel = 4;
     unsigned int stride = width * bytesPerPixel;
     int reconIndex = 0;
     unsigned char recon[height * stride];
@@ -322,26 +361,29 @@ int main(int argc, char *argv[]) {
                 unsigned char recC = recon_c(recon, y, x, bytesPerPixel, stride);
                 recon_x = filter_x + paethPredictor(recA, recB, recC);
             } else {
-                printf("Invalid filter type: %d\n", filterType);
+                printf("Invalid filter type: %d. y = %d x = %d\n", filterType, y, x);
                 return 1;
             }
 
 
-             // printf("x %d = filter_x: %d : recon_x: %d \n", x, filter_x, recon_x);
+            // printf("x %d = filter_x: %d : recon_x: %d \n", x, filter_x, recon_x);
 
             recon[reconIndex] = recon_x & 0xFF;
             reconIndex += 1;
         }
     }
 
+    /*
     printf("pixel data: ");
     for (int i = 0; i < (height * stride); i++) {
         printf("%02x ", recon[i]);
     }
     printf("\n");
-
+    */
     const int screenWidth = 800;
     const int screenHeight = 450;
+
+    printf("Initializing raylib\n");
 
     SetTraceLogLevel(LOG_NONE); // Disable all logs
     InitWindow(screenWidth, screenHeight, "raylib [core] example - basic window");
@@ -354,25 +396,36 @@ int main(int argc, char *argv[]) {
 
         ClearBackground(RAYWHITE);
 
-        int index = 0;
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                unsigned char r = recon[index++];
-                unsigned char g = recon[index++];
-                unsigned char b = recon[index++];
-                unsigned char a = recon[index++];
+        if (colorType == 6) {
+            int index = 0;
+            for (int y = 0; y < height; y++) {
+                for (int x = 0; x < width; x++) {
+                    unsigned char r = recon[index++];
+                    unsigned char g = recon[index++];
+                    unsigned char b = recon[index++];
+                    unsigned char a = recon[index++];
 
 
-                Color pixelColor = (Color){r, g, b, a};
-                DrawPixel(x, y, pixelColor);
+                    Color pixelColor = (Color){r, g, b, a};
+                    DrawPixel(x, y, pixelColor);
+                }
+            }
+        } else if (colorType == 3) {
+            for (int y = 0; y < height; y++) {
+                for (int x = 0; x < width; x++) {
+                    int pixelIndex = x + y * width;
+                    DrawPixel(x, y, colorPalette[recon[pixelIndex]]);
+                }
             }
         }
+
 
         EndDrawing();
     }
 
     CloseWindow(); // Close window and OpenGL context
 
+    free(colorPalette);
     free(decompressedData);
     free(idatData);
     // Clean up
