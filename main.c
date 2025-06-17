@@ -238,6 +238,41 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    // color type 3 must have PLTE chunk
+    int numPalettes = 0;
+    Color *colorPalette;
+    if (colorType == 3) {
+        bool foundPLTE = false;
+        Chunk *cur = head;
+        while (cur) {
+            if (cur->type[0] == 'P' && cur->type[1] == 'L' && cur->type[2] == 'T' && cur->type[3] == 'E') {
+                foundPLTE = true;
+                break;
+            }
+            cur = cur->next;
+        }
+        if (!foundPLTE) {
+            printf("PLTE chunk not found.\n");
+            return 1;
+        }
+        if (cur->length % 3 != 0) {
+            printf("PLTE chunk length is not a multiple of 3.\n");
+            return 1;
+        }
+
+        numPalettes = cur->length / 3;
+        colorPalette = malloc(numPalettes * sizeof(Color));
+        int index = 0;
+        for (int i = 0; i < cur->length; i += 3) {
+            colorPalette[index].r = cur->data[i];
+            colorPalette[index].g = cur->data[i + 1];
+            colorPalette[index].b = cur->data[i + 2];
+            colorPalette[index].a = 255;
+            index++;
+        }
+    }
+
+
     int totalIdatLength = 0;
     Chunk *current = head;
     while (current != NULL) {
@@ -285,11 +320,13 @@ int main(int argc, char *argv[]) {
 
     printf("\nDecompressed data length: %lu\n", decompressedLength);
 
+    /*
     printf("Decompressed data: ");
     for (int i = 0; i < decompressedLength; i++) {
         printf("%02x ", decompressedData[i]);
     }
     printf("\n");
+    */
 
     unsigned int stride = width * bytesPerPixel;
     int reconIndex = 0;
@@ -329,19 +366,20 @@ int main(int argc, char *argv[]) {
             }
 
 
-             // printf("x %d = filter_x: %d : recon_x: %d \n", x, filter_x, recon_x);
+            // printf("x %d = filter_x: %d : recon_x: %d \n", x, filter_x, recon_x);
 
             recon[reconIndex] = recon_x & 0xFF;
             reconIndex += 1;
         }
     }
 
+    /*
     printf("pixel data: ");
     for (int i = 0; i < (height * stride); i++) {
         printf("%02x ", recon[i]);
     }
     printf("\n");
-
+    */
     const int screenWidth = 800;
     const int screenHeight = 450;
 
@@ -358,25 +396,36 @@ int main(int argc, char *argv[]) {
 
         ClearBackground(RAYWHITE);
 
-        int index = 0;
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                unsigned char r = recon[index++];
-                unsigned char g = recon[index++];
-                unsigned char b = recon[index++];
-                unsigned char a = recon[index++];
+        if (colorType == 6) {
+            int index = 0;
+            for (int y = 0; y < height; y++) {
+                for (int x = 0; x < width; x++) {
+                    unsigned char r = recon[index++];
+                    unsigned char g = recon[index++];
+                    unsigned char b = recon[index++];
+                    unsigned char a = recon[index++];
 
 
-                Color pixelColor = (Color){r, g, b, a};
-                DrawPixel(x, y, pixelColor);
+                    Color pixelColor = (Color){r, g, b, a};
+                    DrawPixel(x, y, pixelColor);
+                }
+            }
+        } else if (colorType == 3) {
+            for (int y = 0; y < height; y++) {
+                for (int x = 0; x < width; x++) {
+                    int pixelIndex = x + y * width;
+                    DrawPixel(x, y, colorPalette[recon[pixelIndex]]);
+                }
             }
         }
+
 
         EndDrawing();
     }
 
     CloseWindow(); // Close window and OpenGL context
 
+    free(colorPalette);
     free(decompressedData);
     free(idatData);
     // Clean up
