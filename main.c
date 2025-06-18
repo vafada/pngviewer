@@ -240,7 +240,7 @@ int main(int argc, char *argv[]) {
     }
 
     // color type 3 must have PLTE chunk
-    Color *colorPalette;
+    Color *colorPalette = NULL;
     if (colorType == 3) {
         int numPalettes = 0;
         bool foundPLTE = false;
@@ -262,6 +262,7 @@ int main(int argc, char *argv[]) {
         }
 
         numPalettes = cur->length / 3;
+        printf("Number of palettes: %d\n", numPalettes);
         colorPalette = malloc(numPalettes * sizeof(Color));
         int index = 0;
         for (int i = 0; i < cur->length; i += 3) {
@@ -474,7 +475,12 @@ int main(int argc, char *argv[]) {
 
     CloseWindow(); // Close window and OpenGL context
 
-    free(colorPalette);
+    if (colorPalette)
+    {
+        printf("Cleaning up palette\n");
+        free(colorPalette);
+    }
+
     free(decompressedData);
     free(idatData);
     // Clean up
