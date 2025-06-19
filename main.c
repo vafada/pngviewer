@@ -92,7 +92,7 @@ int main(int argc, char *argv[]) {
     if (argc > 1) {
         input = argv[1]; // Use the first argument
     } else {
-        input = "bee.png"; // Use the default value
+        input = "basn3p04.png"; // Use the default value
     }
 
     FILE *file = fopen(input, "rb"); // Open file in binary read mode
@@ -229,7 +229,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    if (bitDepth != 8 && bitDepth != 16) {
+    if (bitDepth != 4 && bitDepth != 8 && bitDepth != 16) {
         printf("Bit depth not supported.\n");
         return 1;
     }
@@ -300,9 +300,13 @@ int main(int argc, char *argv[]) {
         printf("%02x ", idatData[i]);
     }*/
 
-    unsigned int bytesPerPixel = colorType == 6 ? 4 : 1;
+    double bytesPerPixel = colorType == 6 ? 4 : 1;
     if (colorType == 3) {
-        bytesPerPixel = 1;
+        if (bitDepth == 8) {
+            bytesPerPixel = 1;
+        } else if (bitDepth == 4) {
+            bytesPerPixel = 0.5;
+        }
     } else if (colorType == 6) {
         if (bitDepth == 8) {
             bytesPerPixel = 4;
@@ -395,13 +399,13 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    /*
+
     printf("pixel data: ");
     for (int i = 0; i < (height * stride); i++) {
         printf("%02x ", recon[i]);
     }
     printf("\n");
-    */
+
     const int screenWidth = 800;
     const int screenHeight = 450;
 
@@ -433,10 +437,25 @@ int main(int argc, char *argv[]) {
                 }
             }
         } else if (colorType == 3) {
-            for (int y = 0; y < height; y++) {
-                for (int x = 0; x < width; x++) {
-                    int pixelIndex = x + y * width;
-                    DrawPixel(x, y, colorPalette[recon[pixelIndex]]);
+            if (bitDepth == 8) {
+                for (int y = 0; y < height; y++) {
+                    for (int x = 0; x < width; x++) {
+                        int pixelIndex = x + y * width;
+                        DrawPixel(x, y, colorPalette[recon[pixelIndex]]);
+                    }
+                }
+            } else if (bitDepth == 4) {
+                for (int y = 0; y < height; y++) {
+                    int actualX = 0;
+                    for (int x = 0; x < width / 2; x++) {
+                        int pixelIndex = x + y * (width / 2);
+                        unsigned char r = recon[pixelIndex];
+                        // r contains two indices
+                        unsigned char index1 = (r >> 4) & 0x0F;
+                        unsigned char index2 = r & 0x0F;
+                        DrawPixel(actualX++, y, colorPalette[index1]);
+                        DrawPixel(actualX++, y, colorPalette[index2]);
+                    }
                 }
             }
         } else if (colorType == 2) {
