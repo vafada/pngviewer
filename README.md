@@ -6,3 +6,6 @@ requires:
 
 - raylib
 - zlib
+
+Test icons: https://www.libpng.org/pub/png/pngsuite.html
+Spec: https://www.libpng.org/pub/png/spec/1.2/PNG-Contents.html
