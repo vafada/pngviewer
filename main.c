@@ -72,14 +72,12 @@ unsigned char recon_c(unsigned char *recon, int r, int c, unsigned int bytesPerP
     return 0;
 }
 
-void drawZoomedPixel(int x, int y, Color *color) {
-    int factor = 10;
+void drawZoomedPixel(int x, int y, Color *color, int factor) {
     for (int y2 = 0; y2 < factor; y2++) {
         for (int x2 = 0; x2 < factor; x2++) {
             DrawPixel((x * factor) + x2, (y * factor) + y2, *color);
         }
     }
-
 }
 
 unsigned char paethPredictor(unsigned char a, unsigned char b, unsigned char c) {
@@ -329,9 +327,7 @@ int main(int argc, char *argv[]) {
         } else if (bitDepth == 16) {
             bytesPerPixel = 6;
         }
-    }
-
-    else {
+    } else {
         printf("Color type not supported %d.\n", colorType);
         return 1;
     }
@@ -410,14 +406,16 @@ int main(int argc, char *argv[]) {
     }
 
 
+    /*
     printf("pixel data: ");
     for (int i = 0; i < (height * stride); i++) {
         printf("%02x ", recon[i]);
     }
     printf("\n");
+    */
 
-    const int screenWidth = 800;
-    const int screenHeight = 450;
+    const int screenWidth = 1600;
+    const int screenHeight = 800;
 
     printf("Initializing raylib\n");
 
@@ -425,9 +423,24 @@ int main(int argc, char *argv[]) {
     InitWindow(screenWidth, screenHeight, "raylib [core] example - basic window");
     SetTargetFPS(60); // Set our game to run at 60 frames-per-second
 
+    int zoomFactor = 1;
+
     // Main game loop
     while (!WindowShouldClose()) // Detect window close button or ESC key
     {
+        float wheel = GetMouseWheelMove();
+        if (wheel != 0) {
+            if (wheel > 0) {
+                if (zoomFactor <= 20) {
+                    zoomFactor++;
+                }
+            } else {
+                if (zoomFactor > 1) {
+                    zoomFactor--;
+                }
+            }
+        }
+
         BeginDrawing();
 
         ClearBackground(RAYWHITE);
@@ -443,7 +456,7 @@ int main(int argc, char *argv[]) {
 
 
                     Color pixelColor = (Color){r, g, b, a};
-                    DrawPixel(x, y, pixelColor);
+                    drawZoomedPixel(x, y, &pixelColor, zoomFactor);
                 }
             }
         } else if (colorType == 3) {
@@ -451,7 +464,7 @@ int main(int argc, char *argv[]) {
                 for (int y = 0; y < height; y++) {
                     for (int x = 0; x < width; x++) {
                         int pixelIndex = x + y * width;
-                        DrawPixel(x, y, colorPalette[recon[pixelIndex]]);
+                        drawZoomedPixel(x, y, &colorPalette[recon[pixelIndex]], zoomFactor);
                     }
                 }
             } else if (bitDepth == 4) {
@@ -463,15 +476,14 @@ int main(int argc, char *argv[]) {
                         // r contains two indices
                         unsigned char index1 = (r >> 4) & 0x0F;
                         unsigned char index2 = r & 0x0F;
-                        drawZoomedPixel(actualX, y, &colorPalette[index1]);
+                        drawZoomedPixel(actualX, y, &colorPalette[index1], zoomFactor);
                         actualX++;
-                        drawZoomedPixel(actualX, y, &colorPalette[index2]);
+                        drawZoomedPixel(actualX, y, &colorPalette[index2], zoomFactor);
                         actualX++;
                     }
                 }
             }
         } else if (colorType == 2) {
-
             if (bitDepth == 8) {
                 int index = 0;
                 for (int y = 0; y < height; y++) {
@@ -481,7 +493,7 @@ int main(int argc, char *argv[]) {
                         unsigned char b = recon[index++];
 
                         Color pixelColor = (Color){r, g, b, 255};
-                        DrawPixel(x, y, pixelColor);
+                        drawZoomedPixel(x, y, &pixelColor, zoomFactor);
                     }
                 }
             } else {
@@ -494,7 +506,7 @@ int main(int argc, char *argv[]) {
 
 
                         Color pixelColor = (Color){r, g, b, 255};
-                        DrawPixel(x, y, pixelColor);
+                        drawZoomedPixel(x, y, &pixelColor, zoomFactor);
                     }
                 }
             }
@@ -506,8 +518,7 @@ int main(int argc, char *argv[]) {
 
     CloseWindow(); // Close window and OpenGL context
 
-    if (colorPalette)
-    {
+    if (colorPalette) {
         printf("Cleaning up palette\n");
         free(colorPalette);
     }
