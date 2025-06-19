@@ -72,6 +72,16 @@ unsigned char recon_c(unsigned char *recon, int r, int c, unsigned int bytesPerP
     return 0;
 }
 
+void drawZoomedPixel(int x, int y, Color *color) {
+    int factor = 10;
+    for (int y2 = 0; y2 < factor; y2++) {
+        for (int x2 = 0; x2 < factor; x2++) {
+            DrawPixel((x * factor) + x2, (y * factor) + y2, *color);
+        }
+    }
+
+}
+
 unsigned char paethPredictor(unsigned char a, unsigned char b, unsigned char c) {
     int p = a + b - c;
     int pa = abs(p - a);
@@ -453,8 +463,10 @@ int main(int argc, char *argv[]) {
                         // r contains two indices
                         unsigned char index1 = (r >> 4) & 0x0F;
                         unsigned char index2 = r & 0x0F;
-                        DrawPixel(actualX++, y, colorPalette[index1]);
-                        DrawPixel(actualX++, y, colorPalette[index2]);
+                        drawZoomedPixel(actualX, y, &colorPalette[index1]);
+                        actualX++;
+                        drawZoomedPixel(actualX, y, &colorPalette[index2]);
+                        actualX++;
                     }
                 }
             }
