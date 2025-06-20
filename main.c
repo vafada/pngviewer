@@ -100,7 +100,7 @@ int main(int argc, char *argv[]) {
     if (argc > 1) {
         input = argv[1]; // Use the first argument
     } else {
-        input = "basn3p04.png"; // Use the default value
+        input = "basn0g01.png"; // Use the default value
     }
 
     FILE *file = fopen(input, "rb"); // Open file in binary read mode
@@ -232,12 +232,12 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    if (colorType != 6 && colorType != 3 && colorType != 2) {
+    if (colorType != 0 && colorType != 6 && colorType != 3 && colorType != 2) {
         printf("Color type not supported %d.\n", colorType);
         return 1;
     }
 
-    if (bitDepth != 4 && bitDepth != 8 && bitDepth != 16) {
+    if (bitDepth != 1 && bitDepth != 4 && bitDepth != 8 && bitDepth != 16) {
         printf("Bit depth not supported.\n");
         return 1;
     }
@@ -327,8 +327,13 @@ int main(int argc, char *argv[]) {
         } else if (bitDepth == 16) {
             bytesPerPixel = 6;
         }
+    } else if (colorType == 0) {
+        if (bitDepth == 1) {
+            // 1 / 8
+            bytesPerPixel = 0.125;
+        }
     } else {
-        printf("Color type not supported %d.\n", colorType);
+        printf("Color type (part 2) not supported %d.\n", colorType);
         return 1;
     }
 
@@ -353,14 +358,15 @@ int main(int argc, char *argv[]) {
     printf("\nDecompressed data length: %lu\n", decompressedLength);
 
     /*
-    printf("Decompressed data: ");
-    for (int i = 0; i < decompressedLength; i++) {
-        printf("%02x ", decompressedData[i]);
-    }
-    printf("\n");
+        printf("Decompressed data: ");
+        for (int i = 0; i < decompressedLength; i++) {
+            printf("%02x ", decompressedData[i]);
+        }
+        printf("\n");
     */
 
     unsigned int stride = width * bytesPerPixel;
+    printf("stride: %d \n", stride);
     int reconIndex = 0;
     unsigned char recon[height * stride];
     for (int i = 0; i < height * stride; i++) {
@@ -444,8 +450,32 @@ int main(int argc, char *argv[]) {
         BeginDrawing();
 
         ClearBackground(RAYWHITE);
+        if (colorType == 0) {
+            if (bitDepth == 1)
+            {
+                for (int y = 0; y < height; y++) {
+                    int realX = 0;
+                    for (int x = 0; x < stride; x++)
+                    {
+                        int pixelIndex = x + (y * stride);
+                        int pixelValue = recon[pixelIndex];
+                        // pixelValue contains 8 pixels
+                        for (int j = 7; j >= 0; j--) {
+                            unsigned char bit = (pixelValue >> j) & 1;
 
-        if (colorType == 6) {
+                            if (bit == 1) {
+                                Color whiteColor = (Color){255, 255, 255, 255};
+                                drawZoomedPixel(realX, y, &whiteColor, zoomFactor);
+                            } else {
+                                Color blackColor = (Color){0, 0, 0, 255};
+                                drawZoomedPixel(realX, y, &blackColor, zoomFactor);
+                            }
+                            realX++;
+                        }
+                    }
+                }
+            }
+        } else if (colorType == 6) {
             int index = 0;
             for (int y = 0; y < height; y++) {
                 for (int x = 0; x < width; x++) {
