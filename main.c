@@ -450,6 +450,10 @@ int main(int argc, char *argv[]) {
         BeginDrawing();
 
         ClearBackground(RAYWHITE);
+
+
+        DrawText("Mouse wheel to zoom", 190, 200, 20, LIGHTGRAY);
+
         if (colorType == 0) {
             if (bitDepth == 1)
             {
